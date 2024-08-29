@@ -1,4 +1,4 @@
-import Three from './three';
+import Three from './three-smooth';
 
 document.addEventListener('DOMContentLoaded', () => { });
 
