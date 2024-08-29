@@ -5,6 +5,9 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import gsap from 'gsap';
 import Lenis from '@studio-freight/lenis';
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
 
 const device = {
   width: window.innerWidth,
@@ -29,6 +32,8 @@ let scene5lookAt = [];
 let currentIndex = 0;
 let scrollDelta = 0;
 let targetIndex = 0;
+
+
 
 export default class Three {
   constructor(canvas) {
@@ -64,16 +69,46 @@ export default class Three {
     this.setGeometry();
     this.render();
     this.setResize();
+
+    document.getElementById('closePopupBtn').addEventListener('click', this.closePopup.bind(this));
+
+    this.renderer.domElement.addEventListener('click', (event) => {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, this.camera);
+
+      const intersects = raycaster.intersectObjects([this.scene1.children[12], 
+        this.scene1.children[13]]);
+
+      if (intersects.length > 0) {
+        this.openPopup(intersects[0].object); 
+      }
+    });
+   
   }
+  openPopup(object) {
+    this.setTextOnPopup(object)
+    const popup = document.getElementById('popup');
+    popup.style.display = 'block';
+    popup.style.left = '50%';
+    popup.style.top = '50%';
+    popup.style.transform = 'translate(-50%, -50%)';
+  }
+  setTextOnPopup(object){
+    console.log(object);
+    if(object.name === "Tigne_low"){
+      popupText.innerText = 'This is the text for the 12th object!';
+    }
+  }
+  closePopup() {
+    const popup = document.getElementById('popup');
+    popup.style.display = 'none';
+}
 
-  // setLights() {
-  //   this.ambientLight = new THREE.AmbientLight(0xffffff, 1);
-  //   this.scene.add(this.ambientLight);
+// Inside constructor or an appropriate method
 
-  //   this.directional = new THREE.DirectionalLight(0xffffff, 3);
-  //   this.directional.position.set(-3, 4, 0);
-  //   this.scene.add(this.directional);
-  // }
+  
   setLights() {
     this.ambientLight = new THREE.AmbientLight(new THREE.Color(1, 1, 1, 1));
     this.scene.add(this.ambientLight);
@@ -83,6 +118,7 @@ export default class Three {
     this.scene.add(this.directional);
   }
 
+
   setGeometry() {
     this.DRACOLoader.setDecoderPath('src/vendor/three/draco/');
     this.GLTFLoader.setDRACOLoader(this.DRACOLoader);
@@ -90,6 +126,9 @@ export default class Three {
     // Load your scenes and set up positions and lookAt arrays
     this.GLTFLoader.load("src/assets/Scenes/scene-1.glb", (data) => {
       this.scene1 = data.scene;
+      console.log(this.scene1.children);
+
+      
       this.rightDoor = this.scene1.children[13];
       this.leftDoor = this.scene1.children[14];
       const positions = this.scene1.children[18].geometry.attributes.position.array;
@@ -292,7 +331,6 @@ export default class Three {
 
       console.log('Animating camera', targetPosition, targetLookAt);
       console.log('Current index:', currentIndex);
-      console.log('Target position:', cueerntScene  , targetIndex);
       
       gsap.to(this.camera.position, {
         x: targetPosition.x,
