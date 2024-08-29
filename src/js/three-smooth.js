@@ -26,6 +26,8 @@ let scene4lookAt = [];
 let scene5positions = [];
 let scene5lookAt = [];
 
+let sceneNum = 0;
+
 let currentIndex = 0;
 let scrollDelta = 0;
 let targetIndex = 0;
@@ -252,7 +254,7 @@ export default class Three {
     window.addEventListener('wheel', (e) => {
       scrollDelta += e.deltaY;
       if (scrollDelta >= 100) {
-        targetIndex = Math.min(targetIndex + 1, this.positions[0].length - 1);
+        targetIndex = Math.min(targetIndex + 1, this.positions[sceneNum].length - 1);
         scrollDelta = 0;
       } else if (scrollDelta < -100) {
         targetIndex = Math.max(targetIndex - 1, 0);
@@ -266,11 +268,22 @@ export default class Three {
     if (!this.position1interpolated) return;
 
     if (currentIndex !== targetIndex) {
-      const targetPosition = this.positions[0][targetIndex];
-      const targetLookAt = this.lookAts[0][targetIndex];
+      const targetPosition = this.positions[sceneNum][targetIndex];
+      const targetLookAt = this.lookAts[sceneNum][targetIndex];
 
       console.log('Animating camera', targetPosition, targetLookAt);
       console.log('Current index:', currentIndex);
+
+      if (targetIndex >= 20) {
+        this.openDoors();
+        sceneNum = 1;
+        this.scene1.visible = false;
+        this.scene2.visible = true;
+      } else if (targetIndex <= 19) {
+        this.leftDoor.rotation.y = 0;
+        this.rightDoor.rotation.y = 0;
+      }
+
 
       gsap.to(this.camera.position, {
         x: targetPosition.x,
@@ -292,6 +305,12 @@ export default class Three {
 
       currentIndex = targetIndex;
     }
+  }
+
+  openDoors() {
+    console.log("Doors opening...");
+    gsap.to(this.leftDoor.rotation, { y: THREE.MathUtils.degToRad(70), duration: 1 });
+    gsap.to(this.rightDoor.rotation, { y: THREE.MathUtils.degToRad(-70), duration: 1 });
   }
 
   setSky() {
