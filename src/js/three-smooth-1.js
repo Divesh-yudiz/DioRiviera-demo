@@ -5,15 +5,13 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import gsap from 'gsap';
 import Lenis from '@studio-freight/lenis';
+
+
+import { setupSky } from './objects/sky';
+import { setupLights } from './objects/lights';
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-
-const device = {
-  width: window.innerWidth,
-  height: window.innerHeight,
-  pixelRatio: window.devicePixelRatio
-};
 
 let sun;
 let interpolated = false;
@@ -29,6 +27,9 @@ let scene4lookAt = [];
 let scene5positions = [];
 let scene5lookAt = [];
 
+
+let sceneNum = 0;
+
 let currentIndex = 0;
 let scrollDelta = 0;
 let targetIndex = 0;
@@ -39,36 +40,20 @@ export default class Three {
   constructor(canvas) {
     this.canvas = canvas;
 
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(
-      45,
-      device.width / device.height,
-      0.1,
-      1000
-    );
-    this.camera.position.set(0, 0.7, 3);
-    this.scene.add(this.camera);
-
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: this.canvas,
-      alpha: true,
-      antialias: true,
-      preserveDrawingBuffer: true
-    });
-    this.renderer.setSize(device.width, device.height);
-    this.renderer.setPixelRatio(Math.min(device.pixelRatio, 2));
-
     this.GLTFLoader = new GLTFLoader();
     this.DRACOLoader = new DRACOLoader();
     sun = new THREE.Vector3();
     this.clock = new THREE.Clock();
-    this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
-
-    this.setLights();
-    this.setSky();
+    
+    this.setUpScene();
+    this.setUpRenderer();
+    setupSky(this.scene);
+    setupLights(this.scene);
     this.setGeometry();
     this.render();
     this.setResize();
+    
+    this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
 
     document.getElementById('closePopupBtn').addEventListener('click', this.closePopup.bind(this));
 
@@ -78,47 +63,99 @@ export default class Three {
 
       raycaster.setFromCamera(mouse, this.camera);
 
-      const intersects = raycaster.intersectObjects([this.scene1.children[12], 
-        this.scene1.children[13]]);
+      const intersects = raycaster.intersectObjects([this.scene1.children[11],
+      this.scene1.children[12]]);
 
       if (intersects.length > 0) {
-        this.openPopup(intersects[0].object); 
+        this.openPopup(intersects[0].object);
       }
     });
-   
+
+    window.addEventListener('click', (event) => {
+      const popup = document.getElementById('popup');
+      if (popup.style.display === 'block') {
+        // Close popup if click is outside popup
+        if (!popup.contains(event.target) && !this.renderer.domElement.contains(event.target)) {
+          this.closePopup();
+        }
+      }
+    });
+
   }
+
   openPopup(object) {
     this.setTextOnPopup(object)
     const popup = document.getElementById('popup');
     popup.style.display = 'block';
+    popup.style.opacity = 0;
+    popup.style.transform = 'translate(-50%, -50%) scale(0.8)';
     popup.style.left = '50%';
     popup.style.top = '50%';
-    popup.style.transform = 'translate(-50%, -50%)';
+
+    gsap.to(popup, {
+      opacity: 1,
+      scale: 1,
+      duration: 0.8,
+      ease: 'power2.out'
+    });
   }
-  setTextOnPopup(object){
-    console.log(object);
-    if(object.name === "Tigne_low"){
-      popupText.innerText = 'This is the text for the 12th object!';
+  setTextOnPopup(object) {
+    switch (object.name) {
+      case "Tigne_low":
+        popupText.innerText = 'This is the text for the Tiger Object!';
+        break;
+      case "girafe_LOW":
+        popupText.innerText = 'This is the text for the Girrafic object!';
+        break;
+      default:
+        break;
     }
   }
   closePopup() {
     const popup = document.getElementById('popup');
-    popup.style.display = 'none';
-}
-
-// Inside constructor or an appropriate method
-
-  
-  setLights() {
-    this.ambientLight = new THREE.AmbientLight(new THREE.Color(1, 1, 1, 1));
-    this.scene.add(this.ambientLight);
-
-    this.directional = new THREE.DirectionalLight(new THREE.Color(1, 1, 1, 1), 3);
-    this.directional.position.set(-3, 4, 0);
-    this.scene.add(this.directional);
+    gsap.to(popup, {
+      opacity: 0,
+      scale: 0.8,
+      duration: 0.5,
+      ease: 'power2.in',
+      onComplete: () => {
+        popup.style.display = 'none';
+      }
+    });
   }
 
+  //! new function
 
+  setUpScene() {
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(
+      45,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    this.camera.position.set(0, 0.7, 3);
+    this.scene.add(this.camera);
+  }
+  setUpRenderer() {
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      alpha: true,
+      antialias: true,
+      preserveDrawingBuffer: true
+    });
+    this.renderer.setSize(window.innerWidth,window.innerHeight);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  }
+  setResize() {
+    window.addEventListener('resize', this.onResize.bind(this));
+  }
+  onResize() {
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  }
   setGeometry() {
     this.DRACOLoader.setDecoderPath('src/vendor/three/draco/');
     this.GLTFLoader.setDRACOLoader(this.DRACOLoader);
@@ -126,9 +163,8 @@ export default class Three {
     // Load your scenes and set up positions and lookAt arrays
     this.GLTFLoader.load("src/assets/Scenes/scene-1.glb", (data) => {
       this.scene1 = data.scene;
-      console.log(this.scene1.children);
+      console.log(this.scene1);
 
-      
       this.rightDoor = this.scene1.children[13];
       this.leftDoor = this.scene1.children[14];
       const positions = this.scene1.children[18].geometry.attributes.position.array;
@@ -276,8 +312,8 @@ export default class Three {
     for (let i = 0; i < points.length - 1; i++) {
       const startPoint = points[i];
       const endPoint = points[i + 1];
-      console.log("start Point",startPoint , endPoint);
-      
+      console.log("start Point", startPoint, endPoint);
+
       for (let j = 0; j <= numInterpolations; j++) {
         const t = j / numInterpolations;
         const interpolatedPoint = new THREE.Vector3(
@@ -295,7 +331,13 @@ export default class Three {
   openDoors() {
     console.log("Doors opening...");
     gsap.to(this.leftDoor.rotation, { y: THREE.MathUtils.degToRad(70), duration: 1 });
-    gsap.to(this.rightDoor.rotation, { y: THREE.MathUtils.degToRad(-70), duration: 1 });
+    gsap.to(this.rightDoor.rotation, {
+      y: THREE.MathUtils.degToRad(-70), duration: 1, onComplete: () => {
+        sceneNum = 1;
+        this.scene1.visible = false;
+        this.scene2.visible = true;
+      }
+    });
   }
   closeDoors() {
     console.log("Doors clo...");
@@ -312,7 +354,7 @@ export default class Three {
     window.addEventListener('wheel', (e) => {
       scrollDelta += e.deltaY;
       if (scrollDelta >= 100) {
-        targetIndex = Math.min(targetIndex + 1, this.positions[0].length - 1);
+        targetIndex = Math.min(targetIndex + 1, this.positions[sceneNum].length - 1);
         scrollDelta = 0;
       } else if (scrollDelta < -100) {
         targetIndex = Math.max(targetIndex - 1, 0);
@@ -326,12 +368,33 @@ export default class Three {
     if (!this.position1interpolated) return;
 
     if (currentIndex !== targetIndex) {
-      const targetPosition = this.positions[0][targetIndex];
-      const targetLookAt = this.lookAts[0][targetIndex];
+      const targetPosition = this.positions[sceneNum][targetIndex];
+      const targetLookAt = this.lookAts[sceneNum][targetIndex];
 
-      console.log('Animating camera', targetPosition, targetLookAt);
-      console.log('Current index:', currentIndex);
+      console.log("targetLookAt", targetLookAt);
+      console.log("targetPosition", targetPosition);
+
+      console.log('%c targetIndex', 'color: #e50000',targetIndex );
       
+      
+
+      if (targetIndex === this.positions[sceneNum].length - 1) {
+        sceneNum++;
+        console.log('%c sceneNum', 'color: #0088cc', sceneNum , scenes.length);
+        if (sceneNum < scenes.length) {
+          console.log(scenes[sceneNum - 1]);
+          console.log("2nd scene",scenes[sceneNum]);
+          
+          scenes[sceneNum - 1].visible = false;
+          scenes[sceneNum].visible = true;
+         
+          return; 
+        } else {
+          console.log("All scenes completed");
+          return;
+        }
+      }
+
       gsap.to(this.camera.position, {
         x: targetPosition.x,
         y: targetPosition.y,
@@ -341,56 +404,28 @@ export default class Three {
         onComplete: () => {
         }
       });
-
-      gsap.to(this.camera.lookAt, {
-        x: targetLookAt.x,
-        y: targetLookAt.y,
-        z: targetLookAt.z,
-        duration: 1.5,
-        ease: 'power2.out',
-      });
+      if (targetLookAt) {
+        gsap.to(this.camera.lookAt, {
+          x: targetLookAt.x,
+          y: targetLookAt.y,
+          z: targetLookAt.z,
+          duration: 1.5,
+          ease: 'power2.out',
+          onUpdate: () => {
+            this.camera.lookAt(targetLookAt);
+          }
+        });
+      }
 
       currentIndex = targetIndex;
     }
   }
-
-  setSky() {
-    this.sky = new Sky();
-    this.sky.scale.setScalar(450000);
-    this.scene.add(this.sky);
-
-    const skyUniforms = this.sky.material.uniforms;
-    skyUniforms['turbidity'].value = 10;
-    skyUniforms['rayleigh'].value = 0.5;
-    skyUniforms['mieCoefficient'].value = 0.005;
-    skyUniforms['mieDirectionalG'].value = 0.8;
-
-    const sun = new THREE.Vector3();
-    const phi = THREE.MathUtils.degToRad(90);
-    const theta = THREE.MathUtils.degToRad(90);
-    sun.setFromSphericalCoords(100000, phi, theta);
-    skyUniforms['sunPosition'].value.copy(sun);
-  }
-
   render() {
-    // if (scene1positions.length > 21) {
     this.animateCamera();
-    // }
     const elapsedTime = this.clock.getElapsedTime();
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(this.render.bind(this));
   }
 
-  setResize() {
-    window.addEventListener('resize', this.onResize.bind(this));
-  }
-
-  onResize() {
-    device.width = window.innerWidth;
-    device.height = window.innerHeight;
-    this.camera.aspect = device.width / device.height;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(device.width, device.height);
-    this.renderer.setPixelRatio(Math.min(device.pixelRatio, 2));
-  }
+ 
 }
