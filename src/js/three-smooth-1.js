@@ -13,6 +13,8 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
 
+
+
 let sun;
 let interpolated = false;
 let scenes = [];
@@ -32,7 +34,8 @@ let sceneNum = 0;
 
 let currentIndex = 0;
 let scrollDelta = 0;
-let targetIndex = 0;
+let targetIndex = 2;
+
 
 
 
@@ -44,7 +47,13 @@ export default class Three {
     this.DRACOLoader = new DRACOLoader();
     sun = new THREE.Vector3();
     this.clock = new THREE.Clock();
-    
+
+
+    this.cursor = {
+      x: 0,
+      y: 0
+    }
+
     this.setUpScene();
     this.setUpRenderer();
     setupSky(this.scene);
@@ -52,8 +61,14 @@ export default class Three {
     this.setGeometry();
     this.render();
     this.setResize();
-    
+
     this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+
+    // Mouse move event
+    window.addEventListener('mousemove', (event) => {
+      this.cursor.x = event.clientX / window.innerWidth * 2 - 1
+      this.cursor.y = - (event.clientY / window.innerHeight) * 2 + 1
+    })
 
     document.getElementById('closePopupBtn').addEventListener('click', this.closePopup.bind(this));
 
@@ -63,8 +78,8 @@ export default class Three {
 
       raycaster.setFromCamera(mouse, this.camera);
 
-      const intersects = raycaster.intersectObjects([this.scene1.children[11],
-      this.scene1.children[12]]);
+      const intersects = raycaster.intersectObjects([this.scene1.children[0].children[11],
+      this.scene1.children[0].children[12], this.scene2.children[0].children[16], this.scene3.children[0].children[9], this.scene4.children[0].children[15]]);
 
       if (intersects.length > 0) {
         this.openPopup(intersects[0].object);
@@ -107,6 +122,14 @@ export default class Three {
       case "girafe_LOW":
         popupText.innerText = 'This is the text for the Girrafic object!';
         break;
+      case "bag":
+        popupText.innerText = 'This is the text for the bag object!';
+        break;
+      case "sandal":
+        popupText.innerText = 'This is the text for the sandal object!';
+        break;
+      case "surf":
+        popupText.innerText = 'This is the text for the surf object!';
       default:
         break;
     }
@@ -144,7 +167,7 @@ export default class Three {
       antialias: true,
       preserveDrawingBuffer: true
     });
-    this.renderer.setSize(window.innerWidth,window.innerHeight);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   }
   setResize() {
@@ -157,33 +180,31 @@ export default class Three {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   }
   setGeometry() {
+
     this.DRACOLoader.setDecoderPath('src/vendor/three/draco/');
     this.GLTFLoader.setDRACOLoader(this.DRACOLoader);
 
     // Load your scenes and set up positions and lookAt arrays
     this.GLTFLoader.load("src/assets/Scenes/scene-1.glb", (data) => {
       this.scene1 = data.scene;
-      console.log(this.scene1);
+      this.scene1.visible = true;
 
-      this.rightDoor = this.scene1.children[13];
-      this.leftDoor = this.scene1.children[14];
-      const positions = this.scene1.children[18].geometry.attributes.position.array;
-      const lookAt = this.scene1.children[19].geometry.attributes.position.array;
 
-      for (let i = 0; i < positions.length; i += 3) {
-        scene1positions.push(new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]));
-      }
 
-      for (let i = 0; i < lookAt.length; i += 3) {
-        scene1lookAt.push(new THREE.Vector3(lookAt[i], lookAt[i + 1], lookAt[i + 2]));
-      }
+      this.rightDoor = this.scene1.children[0].children[13];
+      this.leftDoor = this.scene1.children[0].children[14];
+
+      const positions = this.scene1.children[0].children[18].geometry.attributes.position.array;
+      const lookAt = this.scene1.children[0].children[19].geometry.attributes.position.array;
+
+      this.hidePositionAndLookAt(this.scene1.children[0].children[18], this.scene1.children[0].children[19]);
+      this.drawPositionAndLookAt(positions, lookAt, scene1positions, scene1lookAt)
 
       let position = this.interpolatePoints(scene1positions, 10);
       scene1positions = position;
       let lookAts = this.interpolatePoints(scene1lookAt, 10);
       scene1lookAt = lookAts;
 
-      // scene1lookAt.updateProjectionMatrix = true;
       this.position1interpolated = true;
 
       this.positions = [scene1positions, scene2positions, scene3positions, scene4positions, scene5positions];
@@ -195,13 +216,18 @@ export default class Three {
 
     this.GLTFLoader.load("src/assets/Scenes/scene-2.glb", (data) => {
       this.scene2 = data.scene;
-      const positions = this.scene2.children[9].geometry.attributes.position.array;
-      const lookAt = this.scene2.children[10].geometry.attributes.position.array;
+      console.log("scene2", this.scene2);
+
+      this.scene2.visible = false;
+
+      const positions = this.scene2.children[0].children[9].geometry.attributes.position.array;
+      const lookAt = this.scene2.children[0].children[10].geometry.attributes.position.array;
+
+      this.hidePositionAndLookAt(this.scene2.children[0].children[9], this.scene2.children[0].children[10]);
 
       for (let i = 0; i < positions.length; i += 3) {
         scene2positions.push(new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]));
       }
-
       for (let i = 0; i < lookAt.length; i += 3) {
         scene2lookAt.push(new THREE.Vector3(lookAt[i], lookAt[i + 1], lookAt[i + 2]));
       }
@@ -216,22 +242,26 @@ export default class Three {
 
       this.scene.add(this.scene2);
       scenes.push(this.scene2);
-      this.scene2.visible = false;
+
     });
 
     this.GLTFLoader.load("src/assets/Scenes/scene-3.glb", (data) => {
       this.scene3 = data.scene;
-      this.scene3.children[1].visible = false;
-      this.scene3.children[0].visible = false;
-      this.scene3Water = this.scene3.children[0];
-      this.scene3Water1 = this.scene3.children[1];
+      this.scene3.visible = false;
+      console.log('%c Scene3', 'color: #f200e2', this.scene3);
 
-      const positions = this.scene3.children[6].geometry.attributes.position.array;
-      const lookAt = this.scene3.children[5].geometry.attributes.position.array;
+      this.scene3Water = this.scene3.children[0].children[0];
+      this.scene3Water1 = this.scene3.children[0].children[1];
+
+      const positions = this.scene3.children[0].children[6].geometry.attributes.position.array;
+      const lookAt = this.scene3.children[0].children[5].geometry.attributes.position.array;
+
+
+      this.hidePositionAndLookAt(this.scene3.children[0].children[6], this.scene3.children[0].children[5]);
+
       for (let i = 0; i < positions.length; i += 3) {
         scene3positions.push(new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]));
       }
-
       for (let i = 0; i < lookAt.length; i += 3) {
         scene3lookAt.push(new THREE.Vector3(lookAt[i], lookAt[i + 1], lookAt[i + 2]));
       }
@@ -247,15 +277,24 @@ export default class Three {
       this.scene.add(this.scene3);
       scenes.push(this.scene3);
       this.scene3.position.set(-1.8, -1, 1.6);
-      this.scene3.visible = false;
+
     });
 
     this.GLTFLoader.load("src/assets/Scenes/scene-4.glb", (data) => {
       this.scene4 = data.scene;
-      const positions = this.scene4.children[20].geometry.attributes.position.array;
-      const lookAt = this.scene4.children[21].geometry.attributes.position.array;
-      this.scene4Water = this.scene4.children[18];
-      this.scene4Water1 = this.scene4.children[19];
+      console.log("scene4", this.scene4);
+
+      this.scene4.visible = false;
+
+      const positions = this.scene4.children[0].children[19].geometry.attributes.position.array;
+      const lookAt = this.scene4.children[0].children[20].geometry.attributes.position.array;
+
+      this.hidePositionAndLookAt(this.scene4.children[0].children[19], this.scene4.children[0].children[20]);
+
+      this.scene4Water = this.scene4.children[0].children[17];
+      this.scene4Water1 = this.scene4.children[0].children[18];
+
+
       for (let i = 0; i < positions.length; i += 3) {
         scene4positions.push(new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]));
       }
@@ -269,15 +308,17 @@ export default class Three {
       let lookAts = this.interpolatePoints(scene4lookAt, 10);
       scene4lookAt = lookAts;
 
+      this.positions = [scene1positions, scene2positions, scene3positions, scene4positions, scene5positions];
+      this.lookAts = [scene1lookAt, scene2lookAt, scene3lookAt, scene4lookAt, scene5lookAt];
+
       this.scene.add(this.scene4);
       scenes.push(this.scene4);
       this.scene4.position.set(0, -0.2, 0);
-      this.scene4.visible = false;
     });
 
     this.GLTFLoader.load("src/assets/Scenes/scene-5.glb", (data) => {
       this.scene5 = data.scene;
-      console.log("Scene 5:", this.scene5);
+      this.scene5.visible = false;
       const positions = this.scene5.children[23].geometry.attributes.position.array;
       const lookAt = this.scene5.children[24].geometry.attributes.position.array;
       this.scene5Water = this.scene5.children[7];
@@ -300,19 +341,17 @@ export default class Three {
       this.scene.add(this.scene5);
       scenes.push(this.scene5);
       this.scene5.position.set(0.6, -10, 0.7);
-      this.scene5.visible = false;
     });
 
     this.initSmoothScrolling();
   }
 
   interpolatePoints(points, numInterpolations) {
-    
+
     const interpolatedPoints = [];
     for (let i = 0; i < points.length - 1; i++) {
       const startPoint = points[i];
       const endPoint = points[i + 1];
-      console.log("start Point", startPoint, endPoint);
 
       for (let j = 0; j <= numInterpolations; j++) {
         const t = j / numInterpolations;
@@ -329,24 +368,18 @@ export default class Three {
     return interpolatedPoints;
   }
   openDoors() {
-    console.log("Doors opening...");
     gsap.to(this.leftDoor.rotation, { y: THREE.MathUtils.degToRad(70), duration: 1 });
     gsap.to(this.rightDoor.rotation, {
       y: THREE.MathUtils.degToRad(-70), duration: 1, onComplete: () => {
-        sceneNum = 1;
-        this.scene1.visible = false;
-        this.scene2.visible = true;
+        this.switchScene(1);
       }
     });
   }
   closeDoors() {
-    console.log("Doors clo...");
     gsap.to(this.leftDoor.rotation, { y: THREE.MathUtils.degToRad(0), duration: 1 });
     gsap.to(this.rightDoor.rotation, { y: THREE.MathUtils.degToRad(0), duration: 1 });
   }
-
   initSmoothScrolling() {
-    // Smooth scroll with Lenis
     const lenis = new Lenis({
       smooth: true,
       smoothTouch: false,
@@ -362,38 +395,24 @@ export default class Three {
       }
     });
   }
-
-
+  hidePositionAndLookAt = (CamPosition, CamLookAt) => {
+    CamPosition.visible = false;
+    CamLookAt.visible = false;
+  }
+  drawPositionAndLookAt(positions, lookAt, scenePosition, sceneLookAt) {
+    for (let i = 0; i < positions.length; i += 3) {
+      scenePosition.push(new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]));
+    }
+    for (let i = 0; i < lookAt.length; i += 3) {
+      sceneLookAt.push(new THREE.Vector3(lookAt[i], lookAt[i + 1], lookAt[i + 2]));
+    }
+  }
   animateCamera() {
     if (!this.position1interpolated) return;
 
     if (currentIndex !== targetIndex) {
       const targetPosition = this.positions[sceneNum][targetIndex];
       const targetLookAt = this.lookAts[sceneNum][targetIndex];
-
-      console.log("targetLookAt", targetLookAt);
-      console.log("targetPosition", targetPosition);
-
-      console.log('%c targetIndex', 'color: #e50000',targetIndex );
-      
-      
-
-      if (targetIndex === this.positions[sceneNum].length - 1) {
-        sceneNum++;
-        console.log('%c sceneNum', 'color: #0088cc', sceneNum , scenes.length);
-        if (sceneNum < scenes.length) {
-          console.log(scenes[sceneNum - 1]);
-          console.log("2nd scene",scenes[sceneNum]);
-          
-          scenes[sceneNum - 1].visible = false;
-          scenes[sceneNum].visible = true;
-         
-          return; 
-        } else {
-          console.log("All scenes completed");
-          return;
-        }
-      }
 
       gsap.to(this.camera.position, {
         x: targetPosition.x,
@@ -402,30 +421,74 @@ export default class Three {
         duration: 1.5,
         ease: 'power2.out',
         onComplete: () => {
+          this.checkSceneSwitch();
         }
       });
       if (targetLookAt) {
-        gsap.to(this.camera.lookAt, {
-          x: targetLookAt.x,
-          y: targetLookAt.y,
-          z: targetLookAt.z,
+        gsap.to(this.camera.userData, {
+          lookAtX: targetLookAt.x,
+          lookAtY: targetLookAt.y,
+          lookAtZ: targetLookAt.z,
           duration: 1.5,
-          ease: 'power2.out',
-          onUpdate: () => {
-            this.camera.lookAt(targetLookAt);
-          }
-        });
+          ease: 'power2.out'
+        })
       }
 
-      currentIndex = targetIndex;
+    }
+  }
+  checkSceneSwitch() {
+    const camPos = this.camera.position;
+    if (camPos.x === 0.036001 && camPos.y === 0.125627 && camPos.z === -4.169852 && sceneNum === 0) {
+      this.openDoors();
+    } else if (camPos.x === -2.887793 && camPos.y === 0.02631 && camPos.z === 0.960087 && sceneNum === 1) {
+      this.switchScene(2);
+    } else if (camPos.x === -1.004758 && camPos.y === -1.134391 && camPos.z === -5.235442 && sceneNum === 2) {
+      this.switchScene(3);
+    }
+
+  }
+  switchScene(newSceneIndex) {
+    console.log('Switching to scene:', newSceneIndex);
+    if (newSceneIndex === 1) {
+      this.scene1.visible = false;
+      this.scene2.visible = true;
+      sceneNum = 1;
+      targetIndex = 4;
+    } else if (newSceneIndex === 2) {
+      this.scene2.visible = false;
+      this.scene3.visible = true;
+      targetIndex = 4;
+      sceneNum = 2;
+    } else if (newSceneIndex === 3) {
+      this.scene3.visible = false;
+      this.scene4.visible = true;
+      targetIndex = 5;
+      sceneNum = 3;
+    } else if (newSceneIndex === 4) {
+      this.scene4.visible = false;
+      this.scene5.visible = true;
+      targetIndex = 0;
+      sceneNum = 4;
     }
   }
   render() {
     this.animateCamera();
     const elapsedTime = this.clock.getElapsedTime();
+
+    if (this.cursor) {
+      this.camera.position.x += (this.cursor.x * 0.5 - this.camera.position.x) * 0.002 * elapsedTime
+      this.camera.position.y += (- this.cursor.y * 0.5 - this.camera.position.y) * 0.002 * elapsedTime
+    }
+
+    const lookAtTarget = new THREE.Vector3(
+      this.camera.userData.lookAtX,
+      this.camera.userData.lookAtY,
+      this.camera.userData.lookAtZ
+    );
+    this.camera.lookAt(lookAtTarget);
+
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(this.render.bind(this));
   }
 
- 
 }
